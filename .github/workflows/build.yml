@@ -80,6 +80,14 @@ jobs:
 
       - run: flutter pub get
 
+      - name: Fix outdated jcenter() in plugin Gradle files
+        run: |
+          grep -rl "jcenter()" "$PUB_CACHE" --include=build.gradle 2>/dev/null | while read f; do
+            sed -i 's/jcenter()/mavenCentral()/g' "$f"
+            echo "Исправлен: $f"
+          done
+          echo "Проверка выполнена"
+
       - name: Generate word base via AI (optional, manual run only)
         if: github.event_name == 'workflow_dispatch' && inputs.gen_seed
         continue-on-error: true
