@@ -23,6 +23,13 @@ jobs:
 
       - name: Restore folder structure from flat file names
         run: |
+          echo "Файлы в корне репозитория:"
+          ls -la
+          if ! ls *__* >/dev/null 2>&1 && [ ! -f lib/main.dart ]; then
+            echo "ОШИБКА: в корень репозитория не загружены файлы проекта (ожидаются имена вида lib__main.dart)."
+            echo "Загрузите 23 файла из flat_upload.zip в корень репозитория и запустите сборку снова."
+            exit 1
+          fi
           shopt -s nullglob
           for f in *__*; do
             p="${f//__//}"
@@ -83,7 +90,18 @@ jobs:
           LEVEL: ${{ inputs.level }}
         run: python3 tools/gen_seed.py
 
-      - run: flutter build apk --release
+      - name: Build APK (retry on network glitches, e.g. NDK download)
+        run: |
+          for i in 1 2 3; do
+            if flutter build apk --release; then
+              echo "Сборка успешна (попытка $i)"
+              exit 0
+            fi
+            echo "Попытка $i не удалась, повтор через 30 секунд..."
+            sleep 30
+          done
+          echo "ОШИБКА: сборка не удалась после 3 попыток"
+          exit 1
 
       - uses: actions/upload-artifact@v4
         with:
